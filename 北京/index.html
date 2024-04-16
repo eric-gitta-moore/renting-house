@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <title>向地图上添加一个圆</title>
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+        }
+
+        #container {
+            width: 100%;
+            height: 90%;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+    </style>
+    <script charset="utf-8" src="https://map.qq.com/api/js?v=2.exp&key=OB4BZ-D4W3U-B7VVO-4PJWW-6TKDJ-WPB77"></script>
+</head>
+<body>
+<div id="container"></div>
+
+<div id="info">
+    <p>
+        当前地图的经纬度范围(东北点,西南点)为:
+        (<span id="west-north"></span>,<span id="eash-south"></span>)
+    </p>
+    <p>
+        <button id="visibleT" class="btn">setVisible</button>
+    </p>
+</div>
+
+<script>
+
+
+    var center = new qq.maps.LatLng(40.024153, 116.489038);
+    var map = new qq.maps.Map(document.getElementById("container"), {
+        center: center,
+        zoom: 16
+    });
+    var circles = []
+    var c1 = new qq.maps.Circle({
+        map: map,
+        center: center,
+        radius: 1000,
+        strokeWeight: 3
+    });
+    var c2 = new qq.maps.Circle({
+        map: map,
+        center: center,
+        radius: 1500,
+        strokeWeight: 2
+    });
+    var c3 = new qq.maps.Circle({
+        map: map,
+        center: center,
+        radius: 2000,
+        strokeWeight: 1
+    });
+    circles.push(c1, c2, c3);
+
+    function resetBounds() {
+        var west_north = document.getElementById("west-north");
+        var eash_south = document.getElementById("eash-south");
+        var bounds = map.getBounds();     //获取函数范围
+        if (bounds) {                       //如果得到函数范围值
+            west_north.innerHTML =        //西北角的坐标值
+                '[' + bounds.getNorthEast().getLat().toFixed(5) +
+                ', ' + bounds.getNorthEast().getLng().toFixed(5) + ']';
+            eash_south.innerHTML =        //东南角的坐标值
+                '[' + bounds.getSouthWest().getLat().toFixed(5) +
+                ', ' + bounds.getSouthWest().getLng().toFixed(5) + ']';
+        }
+
+    }
+
+    //添加地图监听事件 如果位置改变 则触发函数 resetBounds
+    qq.maps.event.addListener(map, 'bounds_changed', resetBounds);
+
+
+    //setVisible
+    var visibleTF = true;
+    qq.maps.event.addDomListener(document.getElementById("visibleT"), "click", function () {
+        circles.map(circle => {
+            circle.setMap(map);
+        })
+        if (visibleTF) {
+            visibleTF = false;
+            circles.map(circle => {
+                circle.setVisible(false);
+            })
+        } else {
+            visibleTF = true;
+            circles.map(circle => {
+                circle.setVisible(true);
+            })
+        }
+    });
+
+    var markers = [];
+    //添加监听事件  获取鼠标点击事件
+    qq.maps.event.addListener(map, 'click', function (event) {
+        var marker = new qq.maps.Marker({
+            position: event.latLng,
+            map: map
+        });
+        markers.push(marker);
+    });
+
+    new qq.maps.Marker({
+        position: new qq.maps.LatLng(40.02854, 116.47312),
+        map: map
+    });
+    new qq.maps.Marker({
+        position: new qq.maps.LatLng(40.03109, 116.48793),
+        map: map
+    });
+    new qq.maps.Marker({
+        position: new qq.maps.LatLng(40.02534, 116.47716),
+        map: map
+    });
+    new qq.maps.Marker({
+        position: new qq.maps.LatLng(40.02340, 116.49531),
+        map: map
+    });
+    new qq.maps.Marker({
+        position: new qq.maps.LatLng(40.02306, 116.50333),
+        map: map
+    });
+    new qq.maps.Marker({
+        position: new qq.maps.LatLng(40.03125, 116.49581),
+        map: map
+    });
+    new qq.maps.Marker({
+        position: new qq.maps.LatLng(40.02690, 116.48217),
+        map: map
+    });
+
+</script>
+</body>
+</html>
