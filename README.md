@@ -1,5 +1,7 @@
 # renting-house
 
+GitHub Pages：https://eric-gitta-moore.github.io/renting-house/
+
 ## 目录
 - [北京](北京)
   - [北京/城中村地图.jpg](北京/城中村地图.jpg)
