@@ -105,14 +105,20 @@
     });
 
     var markers = [];
-    //添加监听事件  获取鼠标点击事件
-    qq.maps.event.addListener(map, 'click', function (event) {
-        var marker = new qq.maps.Marker({
-            position: event.latLng,
-            map: map
-        });
-        markers.push(marker);
-    });
+    // //添加监听事件  获取鼠标点击事件
+    // qq.maps.event.addListener(map, 'click', function (event) {
+    //     var marker = new qq.maps.Marker({
+    //         position: event.latLng,
+    //         map: map
+    //     });
+    //     markers.push(marker);
+    // });
+
+    var anchor = new qq.maps.Point(6, 6),
+        size = new qq.maps.Size(24, 24),
+        origin = new qq.maps.Point(0, 0),
+        icon = new qq.maps.MarkerImage('https://mapapi.qq.com/web/lbs/javascriptV2/demo/img/center.gif', size, origin, anchor);
+
 
     new qq.maps.Marker({
         position: new qq.maps.LatLng(40.02854, 116.47312),
@@ -173,6 +179,14 @@
     new qq.maps.Marker({
         position: new qq.maps.LatLng(40.01732, 116.50330),
         map: map
+    });
+
+    
+    // 北京市朝阳区马泉营村路
+    new qq.maps.Marker({
+        position: new qq.maps.LatLng(40.037622,116.508563),
+        map,
+        icon,
     });
 
 </script>
