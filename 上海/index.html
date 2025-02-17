@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="initial-scale=1.0, user-scalable=no, width=device-width" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.13/dayjs.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/antd/5.11.1/reset.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/antd/5.11.1/antd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ant-design-icons/5.5.1/index.umd.min.js"
+    referrerpolicy="no-referrer"></script>
+  <script>
+    window._AMapSecurityConfig = {
+      securityJsCode: "63d88b717ae10d70fc5502926351d5d1",
+    };
+  </script>
+  <script
+    src="https://webapi.amap.com/maps?v=2.0&key=6f025e700cbacbb0bb866712d20bb35c&plugin=AMap.CircleEditor,AMap.MouseTool,AMap.Scale,AMap.HawkEye,AMap.ToolBar,AMap.ControlBar"></script>
+  <script src="https://a.amap.com/jsapi_demos/static/demo-center/js/demoutils.js"></script>
+  <style>
+    html,
+    body,
+    #root {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    .app-container {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+
+    .trigger-button {
+      position: fixed;
+      left: 20px;
+      top: 20px;
+      z-index: 1000;
+    }
+
+    .map-container {
+      flex: 1;
+      height: 100%;
+    }
+
+    html .amap-marker-label {
+      border: none;
+      background-color: unset;
+      color: white;
+      user-select: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const MapContext = React.createContext();
+
+    function Sidebar() {
+      const { center, setCenter } = React.useContext(MapContext);
+      const [visible, setVisible] = React.useState(false);
+      const [lng, setLng] = React.useState(center[0]);
+      const [lat, setLat] = React.useState(center[1]);
+      const [selectedTool, setSelectedTool] = React.useState();
+      const mouseToolRef = React.useRef(null);
+      const [isMarking, setIsMarking] = React.useState(false);
+      const [markers, setMarkers] = React.useState([]);
+      const [controls, setControls] = React.useState({
+        scale: false,
+        toolBar: false,
+        controlBar: false,
+        hawkEye: false
+      });
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        setCenter([parseFloat(lng), parseFloat(lat)]);
+        setVisible(false);
+      };
+
+      const handleToolChange = (value) => {
+        handleCloseTool()
+        setSelectedTool(value)
+        const mouseTool = new AMap.MouseTool(window.mapObj);
+        mouseToolRef.current = mouseTool
+
+        if (value === 'distance') {
+          handleMeasureDistance(mouseTool);
+        } else if (value === 'area') {
+          handleMeasureArea(mouseTool);
+        }
+      };
+
+      const handleCloseTool = () => {
+        setSelectedTool(null)
+        if (mouseToolRef.current)
+          mouseToolRef.current.close(true);
+      };
+
+
+      const handleMeasureDistance = () => {
+        if (!mouseToolRef.current) return;
+        mouseToolRef.current.rule({
+          startMarkerOptions: {
+            icon: new AMap.Icon({
+              size: new AMap.Size(19, 31),
+              imageSize: new AMap.Size(19, 31),
+              image: "//webapi.amap.com/theme/v1.3/markers/b/start.png"
+            }),
+            offset: new AMap.Pixel(-9, -31)
+          },
+          endMarkerOptions: {
+            icon: new AMap.Icon({
+              size: new AMap.Size(19, 31),
+              imageSize: new AMap.Size(19, 31),
+              image: "//webapi.amap.com/theme/v1.3/markers/b/end.png"
+            }),
+            offset: new AMap.Pixel(-9, -31)
+          },
+          midMarkerOptions: {
+            icon: new AMap.Icon({
+              size: new AMap.Size(19, 31),
+              imageSize: new AMap.Size(19, 31),
+              image: "//webapi.amap.com/theme/v1.3/markers/b/mid.png"
+            }),
+            offset: new AMap.Pixel(-9, -31)
+          },
+          lineOptions: {
+            strokeStyle: "solid",
+            strokeColor: "#FF33FF",
+            strokeOpacity: 1,
+            strokeWeight: 2
+          }
+        });
+      };
+
+      const handleMeasureArea = () => {
+        if (!mouseToolRef.current) return;
+        mouseToolRef.current.measureArea({
+          strokeColor: '#80d8ff',
+          fillColor: '#80d8ff',
+          fillOpacity: 0.3
+        });
+      };
+
+      const handleControlToggle = (type, state) => {
+        setControls(prev => {
+          const newControls = { ...prev, [type]: !prev[type] };
+          if (window.mapObj) {
+            const control = window.mapObj.controllers[type];
+            if (control) {
+              if (state)
+                control[state]()
+              else
+                newControls[type] ? control.show() : control.hide();
+            }
+          }
+          return newControls;
+        });
+      };
+
+
+      const handleClearMarkers = () => {
+        setMarkers([]);
+        window.mapObj.clearMap();
+      };
+
+      const handleCustomMarkerClickHandler = (e) => {
+        const position = [e.lnglat.getLng(), e.lnglat.getLat()];
+        const marker = new AMap.Marker({
+          position,
+          label: {
+            content: markers.length + 1,
+            offset: [-16, -5],
+          },
+          draggable: true,
+          //           content: `
+          // <div style="position: relative;">
+          //   <img width="19px" height="32px" src="//webapi.amap.com/theme/v1.3/markers/b/mark_bs.png" />
+          //   <span style="position: absolute;f'accent-color:';width: 100%;height: 100%;left: 0;top: 0;display: flex;align-items: center;justify-content: center;color: white;transform: translateY(-5px);"
+          //     >${markers.length + 1}</span>
+          // </div>
+          // `,
+          //           offset: new AMap.Pixel(-13, -30),
+        });
+        window.mapObj.add(marker);
+        setMarkers(prev => [...prev, { id: prev.length + 1, position }]);
+      };
+
+      React.useEffect(() => {
+        if (!window.mapObj || !isMarking) return;
+        window.mapObj.on('click', handleCustomMarkerClickHandler);
+        return () => {
+          window.mapObj.off('click', handleCustomMarkerClickHandler);
+        };
+      }, [isMarking, markers]);
+
+      React.useEffect(() => {
+        Object.keys(controls).map(k => {
+          handleControlToggle(k, 'show')
+        })
+        return () => {
+          Object.keys(controls).map(k => {
+            handleControlToggle(k, 'hide')
+          })
+        }
+      }, [])
+
+      return (
+        <div>
+          <antd.Button
+            className="trigger-button"
+            type="primary"
+            onClick={() => setVisible(true)}
+          >
+            打开控制面板
+          </antd.Button>
+          <antd.Drawer
+            title="地图控制"
+            placement="left"
+            onClose={() => setVisible(false)}
+            open={visible}
+            width={300}
+          >
+            <form onSubmit={handleSubmit}>
+              <antd.Form.Item label="经度">
+                <antd.Input
+                  type="number"
+                  step="any"
+                  value={lng}
+                  onChange={(e) => setLng(e.target.value)}
+                />
+              </antd.Form.Item>
+              <antd.Form.Item label="纬度">
+                <antd.Input
+                  type="number"
+                  step="any"
+                  value={lat}
+                  onChange={(e) => setLat(e.target.value)}
+                />
+              </antd.Form.Item>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <antd.Button type="primary" htmlType="submit" style={{ flex: 1 }}>
+                  更新中心点
+                </antd.Button>
+                <antd.Tooltip title={<a href='https://lbs.amap.com/tools/picker' target='_blank'>高德地图坐标拾取器</a>}>
+                  <antd.Button type="text" shape="circle" icon={<icons.QuestionCircleOutlined />} />
+                </antd.Tooltip>
+              </div>
+            </form>
+            <antd.Divider>测量工具</antd.Divider>
+            <antd.Radio.Group
+              value={selectedTool}
+              onChange={(e) => handleToolChange(e.target.value)}
+              style={{ marginBottom: '16px' }}
+            >
+              <antd.Space direction="vertical">
+                <antd.Radio value="distance">距离测量</antd.Radio>
+                <antd.Radio value="area">面积测量</antd.Radio>
+              </antd.Space>
+            </antd.Radio.Group>
+            {selectedTool && (
+              <antd.Button block onClick={handleCloseTool}>
+                关闭测量工具
+              </antd.Button>
+            )}
+            <antd.Divider>自定义标点工具</antd.Divider>
+            <div style={{ marginBottom: '16px' }}>
+              <antd.Space>
+                <antd.Switch
+                  checked={isMarking}
+                  onChange={setIsMarking}
+                  checkedChildren="开启标记"
+                  unCheckedChildren="关闭标记"
+                />
+                {markers.length > 0 && (
+                  <antd.Button danger onClick={handleClearMarkers}>清除标记</antd.Button>
+                )}
+              </antd.Space>
+            </div>
+            {markers.length > 0 && (
+              <antd.Table
+                dataSource={markers}
+                tableLayout={'auto'}
+                columns={[
+                  {
+                    title: '序号',
+                    dataIndex: 'id',
+                    key: 'id',
+                    width: '45px',
+                  },
+                  {
+                    title: '经度',
+                    dataIndex: ['position', 0],
+                    key: 'lng',
+                    render: (val) => val.toFixed(6)
+                  },
+                  {
+                    title: '纬度',
+                    dataIndex: ['position', 1],
+                    key: 'lat',
+                    render: (val) => val.toFixed(6)
+                  },
+                ]}
+                size="small"
+                pagination={false}
+                scroll={{ y: 200, x: 'max-content' }}
+              />
+            )}
+            <antd.Divider>地图控件</antd.Divider>
+            <antd.Space direction="vertical" style={{ width: '100%' }}>
+              <antd.Checkbox
+                checked={controls.scale}
+                onChange={() => handleControlToggle('scale')}
+              >
+                比例尺
+              </antd.Checkbox>
+              <antd.Checkbox
+                checked={controls.toolBar}
+                onChange={() => handleControlToggle('toolBar')}
+              >
+                工具条
+              </antd.Checkbox>
+              <antd.Checkbox
+                checked={controls.controlBar}
+                onChange={() => handleControlToggle('controlBar')}
+              >
+                方向盘
+              </antd.Checkbox>
+              <antd.Checkbox
+                checked={controls.hawkEye}
+                onChange={() => handleControlToggle('hawkEye')}
+              >
+                鹰眼
+              </antd.Checkbox>
+            </antd.Space>
+          </antd.Drawer>
+        </div>
+      );
+    }
+
+    function MapContainer() {
+      const mapRef = React.useRef(null);
+      const { center } = React.useContext(MapContext);
+
+      const initMap = (container, center) => {
+        return new AMap.Map(container, {
+          center,
+          zoom: 14,
+        });
+      };
+
+
+      const drawCircle = (map, center, options = { radius: 2000 }) => {
+        const circle = new AMap.Circle({
+          center,
+          strokeColor: "red",
+          strokeStyle: "dashed",
+          fillOpacity: 0,
+          bubble: true,
+          ...options,
+        });
+
+        map.add(circle);
+        return circle;
+      };
+
+      const addMarker = (map, center) => {
+        const centerMarker = new AMap.Marker({
+          position: center,
+          content: '<div style="width: 6px; height: 6px; background-color: #f00; border-radius: 50%;"></div>',
+          offset: new AMap.Pixel(-3, -3),
+        });
+
+        map.add([centerMarker]);
+        return centerMarker;
+      };
+
+      const drawRadius = (map, circle, angle = 0, showDistanceText = true, options = {}) => {
+        const radian = angle * Math.PI / 180
+        const center = circle.getCenter()
+        const circleRadius = circle.getRadius()
+        const centerLngLat = new AMap.LngLat(center.lng, center.lat);
+        const circlePoint = centerLngLat.offset(Math.cos(radian) * circleRadius, Math.sin(radian) * circleRadius);
+
+        const radius = new AMap.Polyline({
+          path: [centerLngLat, circlePoint],
+          strokeColor: "blue",
+          strokeStyle: "solid",
+          ...options,
+        });
+
+        if (showDistanceText) {
+          const midPoint = new AMap.LngLat(
+            (centerLngLat.lng + circlePoint.lng) / 2,
+            (centerLngLat.lat + circlePoint.lat) / 2
+          );
+
+          const text = new AMap.Text({
+            text: `${Math.round(circleRadius)}m`,
+            position: midPoint,
+            offset: new AMap.Pixel(-10, -10),
+            style: {
+              fontSize: "12px",
+            }
+          });
+
+          const endMarker = addMarker(map, circlePoint)
+
+          map.add([radius, text]);
+          return { radius, text };
+        }
+
+        map.add([radius]);
+        return radius;
+      };
+
+      React.useEffect(() => {
+        if (!mapRef.current) return;
+
+        const map = initMap(mapRef.current, center);
+        map.controllers = {
+          scale: new AMap.Scale({ visible: false }),
+          toolBar: new AMap.ToolBar({ visible: false, position: { top: '110px', right: '40px' } }),
+          controlBar: new AMap.ControlBar({ visible: false, position: { top: '10px', right: '10px' } }),
+          hawkEye: new AMap.HawkEye({ visible: false }),
+        }
+        Object.entries(map.controllers).map(([k, v]) => {
+          map.addControl(v)
+        })
+
+        const circle = drawCircle(map, center);
+        const walkCircle = drawCircle(map, center, { radius: 850 });
+        const marker = addMarker(map, center);
+        drawRadius(map, circle);
+        drawRadius(map, walkCircle, 30);
+
+        map.setFitView();
+        window.mapObj = map;
+
+        return () => {
+          map.destroy();
+          window.mapObj = undefined;
+        };
+      }, [center]);
+
+      return <div ref={mapRef} className="map-container" />;
+    }
+
+    function App() {
+      const [center, setCenter] = React.useState([121.384999, 31.167231]);
+      return (
+        <MapContext.Provider value={{ center, setCenter }}>
+          <div className="app-container">
+            <MapContainer />
+            <Sidebar />
+          </div>
+        </MapContext.Provider>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+
+</html>
