@@ -39,6 +39,7 @@
 
 ### 四、再次看房 砍价挑毛病
 
+---
 GitHub Pages：https://eric-gitta-moore.github.io/renting-house/
 
 ## 目录
